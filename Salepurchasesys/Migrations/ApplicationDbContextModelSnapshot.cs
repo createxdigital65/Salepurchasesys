@@ -50,7 +50,7 @@ namespace Salepurchasesys.Migrations
 
                     b.HasIndex("ProductSubCategoryId");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("SalePurchasesys.Models.ProductCategory", b =>
@@ -96,7 +96,7 @@ namespace Salepurchasesys.Migrations
 
                     b.HasIndex("ProductCategoryId");
 
-                    b.ToTable("ProductSubCategories");
+                    b.ToTable("ProductSubCategories", (string)null);
                 });
 
             modelBuilder.Entity("SalePurchasesys.Models.Purchase", b =>
@@ -147,7 +147,7 @@ namespace Salepurchasesys.Migrations
 
                     b.HasIndex("PurchaseId");
 
-                    b.ToTable("PurchaseDetails");
+                    b.ToTable("PurchaseDetails", (string)null);
                 });
 
             modelBuilder.Entity("SalePurchasesys.Models.Sale", b =>
@@ -201,7 +201,7 @@ namespace Salepurchasesys.Migrations
 
                     b.HasIndex("SaleId");
 
-                    b.ToTable("SaleDetails");
+                    b.ToTable("SaleDetails", (string)null);
                 });
 
             modelBuilder.Entity("SalePurchasesys.Models.User", b =>

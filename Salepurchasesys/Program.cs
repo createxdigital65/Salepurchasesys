@@ -6,6 +6,8 @@ using Microsoft.OpenApi.Models;
 using SalePurchasesys.Models;
 using SalePurchasesys.Services;
 using SalePurchasesys.Data;
+using AutoMapper;
+using SalePurchasesys.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +23,6 @@ builder.Services.AddCors(options =>
                         .AllowAnyMethod());
 });
 
-
 // Configure Entity Framework with SQL Server
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -31,6 +32,9 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
 builder.Services.AddScoped<ISaleService, SaleService>();
+
+// ? Add AutoMapper BEFORE builder.Build()
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
 // Add Swagger for API documentation
 builder.Services.AddSwaggerGen(c =>
@@ -56,9 +60,9 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = "swagger"; // Swagger loads at "/swagger"
     });
 }
-// ?? Add this BEFORE UseAuthorization
-app.UseCors("AllowAngularClient");
 
+// CORS
+app.UseCors("AllowAngularClient");
 
 app.UseHttpsRedirection();
 app.UseAuthorization();

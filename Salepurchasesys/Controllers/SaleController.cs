@@ -1,86 +1,89 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using SalePurchasesys.DTOs;
 using SalePurchasesys.Models;
 using SalePurchasesys.Services;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
-namespace SalePurchasesys.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class SaleController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class SaleController : ControllerBase
+    private readonly ISaleService _saleService;
+    private readonly IMapper _mapper;
+
+    public SaleController(ISaleService saleService, IMapper mapper)
     {
-        private readonly ISaleService _saleService;
+        _saleService = saleService;
+        _mapper = mapper;
+    }
 
-        public SaleController(ISaleService saleService)
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<SaleDto>>> GetSales()
+    {
+        var sales = await _saleService.GetAllSalesAsync();
+        var salesDto = _mapper.Map<IEnumerable<SaleDto>>(sales);
+        return Ok(salesDto);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<SaleDto>> GetSale(int id)
+    {
+        var sale = await _saleService.GetSaleByIdAsync(id);
+        if (sale == null)
+            return NotFound();
+
+        var saleDto = _mapper.Map<SaleDto>(sale);
+        return Ok(saleDto);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<SaleDto>> CreateSale([FromBody] SaleCreateDto saleCreateDto)
+    {
+        if (saleCreateDto.SaleDetails == null || !saleCreateDto.SaleDetails.Any())
         {
-            _saleService = saleService;
+            return BadRequest("At least one SaleDetail is required.");
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Sale>>> GetSales()
-        {
-            return Ok(await _saleService.GetAllSalesAsync());
-        }
+        var sale = _mapper.Map<Sale>(saleCreateDto);
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Sale>> GetSale(int id)
+        foreach (var detail in sale.SaleDetails)
         {
-            var sale = await _saleService.GetSaleByIdAsync(id);
-            if (sale == null)
-                return NotFound();
-            return Ok(sale);
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<Sale>> CreateSale([FromBody] Sale sale)
-        {
-            if (sale.SaleDetails == null || sale.SaleDetails.Count == 0)
+            var product = await _saleService.GetProductByIdAsync(detail.ProductId);
+            if (product == null)
             {
-                return BadRequest("At least one SaleDetail is required.");
+                return NotFound($"Product with ID {detail.ProductId} not found.");
             }
 
-            // Optionally, calculate subtotal for each sale detail (if needed)
-            foreach (var detail in sale.SaleDetails)
-            {
-                var product = await _saleService.GetProductByIdAsync(detail.ProductId); // Use _saleService to fetch the product
-                if (product == null)
-                {
-                    return NotFound($"Product with ID {detail.ProductId} not found.");
-                }
-
-                // Set Subtotal if not already set
-                detail.CalculateSubtotal(product.Price);
-
-                // Set SaleId for each SaleDetail (this is missing in your original data)
-                detail.SaleId = sale.Id;
-            }
-
-            var createdSale = await _saleService.CreateSaleAsync(sale);
-            return CreatedAtAction(nameof(GetSale), new { id = createdSale.Id }, createdSale);
+            detail.CalculateSubtotal(product.Price);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSale(int id, [FromBody] Sale sale)
-        {
-            if (id != sale.Id)
-                return BadRequest();
+        var createdSale = await _saleService.CreateSaleAsync(sale);
+        var createdSaleDto = _mapper.Map<SaleDto>(createdSale);
+        return CreatedAtAction(nameof(GetSale), new { id = createdSaleDto.Id }, createdSaleDto);
+    }
 
-            var updatedSale = await _saleService.UpdateSaleAsync(id, sale);
-            if (updatedSale == null)
-                return NotFound();
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateSale(int id, [FromBody] SaleUpdateDto saleUpdateDto)
+    {
+        if (id != saleUpdateDto.Id)
+            return BadRequest();
 
-            return NoContent();
-        }
+        var sale = _mapper.Map<Sale>(saleUpdateDto);
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSale(int id)
-        {
-            var success = await _saleService.DeleteSaleAsync(id);
-            if (!success)
-                return NotFound();
+        var updatedSale = await _saleService.UpdateSaleAsync(id, sale);
+        if (updatedSale == null)
+            return NotFound();
 
-            return NoContent();
-        }
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteSale(int id)
+    {
+        var success = await _saleService.DeleteSaleAsync(id);
+        if (!success)
+            return NotFound();
+
+        return NoContent();
     }
 }

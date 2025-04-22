@@ -1,6 +1,6 @@
-using SalePurchasesys.Services;
 using Microsoft.AspNetCore.Mvc;
-using SalePurchasesys.Models;
+using SalePurchasesys.DTOs;
+using SalePurchasesys.Services;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -16,13 +16,13 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
     {
         return Ok(await _productService.GetAllProductsAsync());
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Product>> GetProduct(int id)
+    public async Task<ActionResult<ProductDto>> GetProduct(int id)
     {
         var product = await _productService.GetProductByIdAsync(id);
         if (product == null) return NotFound();
@@ -30,30 +30,23 @@ public class ProductController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Product>> CreateProduct(Product product)
+    public async Task<ActionResult<ProductDto>> CreateProduct(ProductCreateDto productDto)
     {
-        var createdProduct = await _productService.CreateProductAsync(product);
+        var createdProduct = await _productService.CreateProductAsync(productDto);
         return CreatedAtAction(nameof(GetProduct), new { id = createdProduct.Id }, createdProduct);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateProduct(int id, Product product)
+    public async Task<IActionResult> UpdateProduct(int id, ProductUpdateDto productDto)
     {
-        if (id != product.Id)
-        {
+        if (id != productDto.Id)
             return BadRequest("Product ID mismatch.");
-        }
 
-        var updatedProduct = await _productService.UpdateProductAsync(id, product);  // Pass both id and product
+        var updated = await _productService.UpdateProductAsync(id, productDto);
+        if (updated == null) return NotFound();
 
-        if (updatedProduct == null)
-        {
-            return NotFound($"Product with ID {id} not found.");
-        }
-
-        return NoContent();  // Returns 204 No Content if the update was successful
+        return NoContent();
     }
-
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProduct(int id)

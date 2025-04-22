@@ -1,8 +1,9 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SalePurchasesys.Data;
+using SalePurchasesys.DTOs;
 using SalePurchasesys.Models;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -13,97 +14,81 @@ namespace SalePurchasesys.Controllers
     public class SaleDetailController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMapper _mapper;
 
-        public SaleDetailController(ApplicationDbContext context)
+        public SaleDetailController(ApplicationDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        // GET: api/SaleDetail
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SaleDetail>>> GetSaleDetails()
+        public async Task<ActionResult<IEnumerable<SaleDetailDto>>> GetSaleDetails()
         {
-            var saleDetails = await _context.Set<SaleDetail>()
+            var saleDetails = await _context.SaleDetails
                 .Include(sd => sd.Sale)
                 .Include(sd => sd.Product)
                 .ToListAsync();
-            return Ok(saleDetails);
+
+            return Ok(_mapper.Map<List<SaleDetailDto>>(saleDetails));
         }
 
-        // GET: api/SaleDetail/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<SaleDetail>> GetSaleDetail(int id)
+        public async Task<ActionResult<SaleDetailDto>> GetSaleDetail(int id)
         {
-            var saleDetail = await _context.Set<SaleDetail>()
+            var saleDetail = await _context.SaleDetails
                 .Include(sd => sd.Sale)
                 .Include(sd => sd.Product)
                 .FirstOrDefaultAsync(sd => sd.Id == id);
-            if (saleDetail == null)
-                return NotFound();
-            return Ok(saleDetail);
+
+            if (saleDetail == null) return NotFound();
+
+            return Ok(_mapper.Map<SaleDetailDto>(saleDetail));
         }
 
-        // POST: api/SaleDetail
         [HttpPost]
-        public async Task<ActionResult<SaleDetail>> CreateSaleDetail([FromBody] SaleDetail saleDetail)
+        public async Task<ActionResult<SaleDetailDto>> CreateSaleDetail([FromBody] CreateSaleDetailDto dto)
         {
-            if (saleDetail == null || saleDetail.ProductId == 0 || saleDetail.Quantity == 0)
-            {
-                return BadRequest("SaleDetail must have a valid ProductId and Quantity.");
-            }
+            var saleExists = await _context.Sales.AnyAsync(s => s.Id == dto.SaleId);
+            var product = await _context.Products.FindAsync(dto.ProductId);
 
-            // Check if Sale exists; if not, create a new Sale
-            var sale = await _context.Sales.FindAsync(saleDetail.SaleId);
-            if (sale == null)
-            {
-                sale = new Sale
-                {
-                    OrderDate = DateTime.UtcNow // Set current date
-                };
-                _context.Sales.Add(sale);
-                await _context.SaveChangesAsync();
+            if (!saleExists) return NotFound($"Sale with ID {dto.SaleId} not found.");
+            if (product == null) return NotFound($"Product with ID {dto.ProductId} not found.");
 
-                // Assign the newly created Sale ID to SaleDetail
-                saleDetail.SaleId = sale.Id;
-            }
-
-            // Check if Product exists
-            var product = await _context.Products.FindAsync(saleDetail.ProductId);
-            if (product == null)
-            {
-                return NotFound($"Product with ID {saleDetail.ProductId} not found.");
-            }
-
-            // Calculate Subtotal if needed
+            var saleDetail = _mapper.Map<SaleDetail>(dto);
             saleDetail.CalculateSubtotal(product.Price);
 
-            _context.Add(saleDetail);
+            _context.SaleDetails.Add(saleDetail);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetSaleDetail), new { id = saleDetail.Id }, saleDetail);
+            var resultDto = _mapper.Map<SaleDetailDto>(saleDetail);
+
+            return CreatedAtAction(nameof(GetSaleDetail), new { id = saleDetail.Id }, resultDto);
         }
 
-        // PUT: api/SaleDetail/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSaleDetail(int id, [FromBody] SaleDetail saleDetail)
+        public async Task<IActionResult> UpdateSaleDetail(int id, [FromBody] UpdateSaleDetailDto dto)
         {
-            if (id != saleDetail.Id)
-                return BadRequest("SaleDetail ID mismatch.");
+            if (id != dto.Id) return BadRequest("ID mismatch.");
 
-            _context.Entry(saleDetail).State = EntityState.Modified;
+            var saleDetail = await _context.SaleDetails.FindAsync(id);
+            if (saleDetail == null) return NotFound();
+
+            _mapper.Map(dto, saleDetail);
             await _context.SaveChangesAsync();
+
             return NoContent();
         }
 
-        // DELETE: api/SaleDetail/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSaleDetail(int id)
         {
-            var saleDetail = await _context.Set<SaleDetail>().FindAsync(id);
-            if (saleDetail == null)
-                return NotFound();
-            _context.Remove(saleDetail);
+            var saleDetail = await _context.SaleDetails.FindAsync(id);
+            if (saleDetail == null) return NotFound();
+
+            _context.SaleDetails.Remove(saleDetail);
             await _context.SaveChangesAsync();
+
             return NoContent();
         }
     }

@@ -3,55 +3,53 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using SalePurchasesys.Data;
+using AutoMapper;
+using SalePurchasesys.DTOs;
 
 namespace SalePurchasesys.Services
 {
     public class ProductService : IProductService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMapper _mapper;
 
-        public ProductService(ApplicationDbContext context)
+        public ProductService(ApplicationDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        // Get all products from the database
-        public async Task<IEnumerable<Product>> GetAllProductsAsync()
+        public async Task<IEnumerable<ProductDto>> GetAllProductsAsync()
         {
-            return await _context.Products.ToListAsync();
+            var products = await _context.Products.ToListAsync();
+            return _mapper.Map<IEnumerable<ProductDto>>(products);
         }
 
-        // Get a specific product by its ID
-        public async Task<Product> GetProductByIdAsync(int id)
+        public async Task<ProductDto> GetProductByIdAsync(int id)
         {
-            return await _context.Products.FirstOrDefaultAsync(p => p.Id == id);  // Fetch by id, or null if not found
+            var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
+            return product == null ? null : _mapper.Map<ProductDto>(product);
         }
 
-        // Create a new product in the database
-        public async Task<Product> CreateProductAsync(Product product)
+        public async Task<ProductDto> CreateProductAsync(ProductCreateDto productDto)
         {
+            var product = _mapper.Map<Product>(productDto);
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
-            return product;
+            return _mapper.Map<ProductDto>(product);
         }
 
-        // Update product details
-        public async Task<Product> UpdateProductAsync(int id, Product product)
+        public async Task<ProductDto> UpdateProductAsync(int id, ProductUpdateDto productDto)
         {
             var existingProduct = await _context.Products.FindAsync(id);
             if (existingProduct == null) return null;
 
-            existingProduct.Name = product.Name;
-            existingProduct.Price = product.Price;
-            existingProduct.Stock = product.Stock;
-            existingProduct.ProductSubCategoryId = product.ProductSubCategoryId;
-            existingProduct.UserId = product.UserId;
-
+            _mapper.Map(productDto, existingProduct); // updates the existing product
             await _context.SaveChangesAsync();
-            return existingProduct;
+
+            return _mapper.Map<ProductDto>(existingProduct);
         }
 
-        // Delete a product by its ID
         public async Task<bool> DeleteProductAsync(int id)
         {
             var product = await _context.Products.FindAsync(id);

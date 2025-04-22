@@ -12,8 +12,8 @@ using SalePurchasesys.Data;
 namespace Salepurchasesys.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250409141602_salesadded")]
-    partial class salesadded
+    [Migration("20250422203037_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -53,7 +53,7 @@ namespace Salepurchasesys.Migrations
 
                     b.HasIndex("ProductSubCategoryId");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("SalePurchasesys.Models.ProductCategory", b =>
@@ -86,7 +86,6 @@ namespace Salepurchasesys.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
@@ -100,7 +99,7 @@ namespace Salepurchasesys.Migrations
 
                     b.HasIndex("ProductCategoryId");
 
-                    b.ToTable("ProductSubCategories");
+                    b.ToTable("ProductSubCategories", (string)null);
                 });
 
             modelBuilder.Entity("SalePurchasesys.Models.Purchase", b =>
@@ -114,15 +113,13 @@ namespace Salepurchasesys.Migrations
                     b.Property<DateTime>("PurchaseDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("TotalAmount")
-                        .HasColumnType("int");
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Purchases");
                 });
@@ -135,9 +132,6 @@ namespace Salepurchasesys.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal>("CostPrice")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
@@ -147,13 +141,16 @@ namespace Salepurchasesys.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
                     b.HasIndex("PurchaseId");
 
-                    b.ToTable("PurchaseDetails");
+                    b.ToTable("PurchaseDetails", (string)null);
                 });
 
             modelBuilder.Entity("SalePurchasesys.Models.Sale", b =>
@@ -178,8 +175,6 @@ namespace Salepurchasesys.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("Sales");
                 });
 
@@ -200,7 +195,7 @@ namespace Salepurchasesys.Migrations
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("Subtotal")
+                    b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -209,7 +204,7 @@ namespace Salepurchasesys.Migrations
 
                     b.HasIndex("SaleId");
 
-                    b.ToTable("SaleDetails");
+                    b.ToTable("SaleDetails", (string)null);
                 });
 
             modelBuilder.Entity("SalePurchasesys.Models.User", b =>
@@ -263,17 +258,6 @@ namespace Salepurchasesys.Migrations
                     b.Navigation("ProductCategory");
                 });
 
-            modelBuilder.Entity("SalePurchasesys.Models.Purchase", b =>
-                {
-                    b.HasOne("SalePurchasesys.Models.User", "User")
-                        .WithMany("Purchases")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SalePurchasesys.Models.PurchaseDetail", b =>
                 {
                     b.HasOne("SalePurchasesys.Models.Product", "Product")
@@ -291,17 +275,6 @@ namespace Salepurchasesys.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("Purchase");
-                });
-
-            modelBuilder.Entity("SalePurchasesys.Models.Sale", b =>
-                {
-                    b.HasOne("SalePurchasesys.Models.User", "User")
-                        .WithMany("Sales")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SalePurchasesys.Models.SaleDetail", b =>
@@ -348,13 +321,6 @@ namespace Salepurchasesys.Migrations
             modelBuilder.Entity("SalePurchasesys.Models.Sale", b =>
                 {
                     b.Navigation("SaleDetails");
-                });
-
-            modelBuilder.Entity("SalePurchasesys.Models.User", b =>
-                {
-                    b.Navigation("Purchases");
-
-                    b.Navigation("Sales");
                 });
 #pragma warning restore 612, 618
         }

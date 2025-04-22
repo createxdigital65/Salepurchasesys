@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
-using SalePurchasesys.Models;
+using Microsoft.EntityFrameworkCore;
 using SalePurchasesys.Data;
+using SalePurchasesys.Models;
+using SalePurchasesys.DTOs;
+using AutoMapper;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 
 namespace SalePurchasesys.Controllers
 {
@@ -12,62 +14,70 @@ namespace SalePurchasesys.Controllers
     public class ProductSubCategoryController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        public ProductSubCategoryController(ApplicationDbContext context)
+        private readonly IMapper _mapper;
+
+        public ProductSubCategoryController(ApplicationDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        // GET: api/ProductSubCategory
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductSubCategory>>> GetSubCategories()
+        public async Task<ActionResult<IEnumerable<ProductSubCategoryDto>>> GetSubCategories()
         {
-            // Including the parent ProductCategory for reference
-            return await _context.ProductSubCategories.Include(sc => sc.ProductCategory).ToListAsync();
+            var subCategories = await _context.ProductSubCategories
+                .Include(sc => sc.ProductCategory)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<List<ProductSubCategoryDto>>(subCategories));
         }
 
-        // GET: api/ProductSubCategory/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ProductSubCategory>> GetSubCategory(int id)
+        public async Task<ActionResult<ProductSubCategoryDto>> GetSubCategory(int id)
         {
             var subCategory = await _context.ProductSubCategories
                 .Include(sc => sc.ProductCategory)
                 .FirstOrDefaultAsync(sc => sc.Id == id);
+
             if (subCategory == null)
                 return NotFound();
-            return subCategory;
+
+            return Ok(_mapper.Map<ProductSubCategoryDto>(subCategory));
         }
 
-        // POST: api/ProductSubCategory
         [HttpPost]
-        public async Task<ActionResult<ProductSubCategory>> CreateSubCategory(ProductSubCategory subCategory)
+        public async Task<ActionResult<ProductSubCategoryDto>> CreateSubCategory(ProductSubCategoryDto createDto)
         {
+            var subCategory = _mapper.Map<ProductSubCategory>(createDto);
             _context.ProductSubCategories.Add(subCategory);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetSubCategory), new { id = subCategory.Id }, subCategory);
+
+            var subCategoryDto = _mapper.Map<ProductSubCategoryDto>(subCategory);
+            return CreatedAtAction(nameof(GetSubCategory), new { id = subCategory.Id }, subCategoryDto);
         }
 
-        // PUT: api/ProductSubCategory/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSubCategory(int id, ProductSubCategory subCategory)
+        public async Task<IActionResult> UpdateSubCategory(int id, ProductSubCategoryDto subCategoryDto)
         {
-            if (id != subCategory.Id)
+            if (id != subCategoryDto.Id)
                 return BadRequest("SubCategory ID mismatch.");
 
+            var subCategory = _mapper.Map<ProductSubCategory>(subCategoryDto);
             _context.Entry(subCategory).State = EntityState.Modified;
             await _context.SaveChangesAsync();
+
             return NoContent();
         }
 
-        // DELETE: api/ProductSubCategory/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSubCategory(int id)
         {
             var subCategory = await _context.ProductSubCategories.FindAsync(id);
-            if (subCategory == null)
-                return NotFound();
+            if (subCategory == null) return NotFound();
 
             _context.ProductSubCategories.Remove(subCategory);
             await _context.SaveChangesAsync();
+
             return NoContent();
         }
     }

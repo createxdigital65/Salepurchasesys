@@ -1,18 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SalePurchasesys.Models;
-using SalePurchasesys.Services;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 
 namespace SalePurchasesys.Data
 {
     public class ApplicationDbContext : DbContext
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-        {
-        }
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
-        // DbSets for each model/table in the database
         public DbSet<User> Users { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Sale> Sales { get; set; }
@@ -22,32 +16,35 @@ namespace SalePurchasesys.Data
         public DbSet<ProductCategory> ProductCategories { get; set; }
         public DbSet<ProductSubCategory> ProductSubCategories { get; set; }
 
-        // Override the OnModelCreating method to configure relationships if necessary
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configure the relationships between tables (if needed)
             modelBuilder.Entity<Product>()
+                .ToTable("Products")
                 .HasOne(p => p.ProductSubCategory)
                 .WithMany(ps => ps.Products)
                 .HasForeignKey(p => p.ProductSubCategoryId);
 
             modelBuilder.Entity<SaleDetail>()
+                .ToTable("SaleDetails")
                 .HasOne(sd => sd.Sale)
                 .WithMany(s => s.SaleDetails)
-                .HasForeignKey(sd => sd.SaleId);
+                .HasForeignKey(sd => sd.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<SaleDetail>()
                 .HasOne(sd => sd.Product)
                 .WithMany(p => p.SaleDetails)
-                .HasForeignKey(sd => sd.ProductId);
+                .HasForeignKey(sd => sd.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<PurchaseDetail>()
-       .HasOne(pd => pd.Purchase)
-       .WithMany(p => p.PurchaseDetails)
-       .HasForeignKey(pd => pd.PurchaseId)
-       .OnDelete(DeleteBehavior.Cascade); // Or DeleteBehavior.SetNull if needed
+                .ToTable("PurchaseDetails")
+                .HasOne(pd => pd.Purchase)
+                .WithMany(p => p.PurchaseDetails)
+                .HasForeignKey(pd => pd.PurchaseId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<PurchaseDetail>()
                 .HasOne(pd => pd.Product)
@@ -56,6 +53,7 @@ namespace SalePurchasesys.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ProductSubCategory>()
+                .ToTable("ProductSubCategories")
                 .HasOne(psc => psc.ProductCategory)
                 .WithMany(pc => pc.ProductSubCategories)
                 .HasForeignKey(psc => psc.ProductCategoryId);

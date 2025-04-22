@@ -1,48 +1,67 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using SalePurchasesys.Data;
+using SalePurchasesys.DTOs;
 using SalePurchasesys.Models;
-// …
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-public class UserService : IUserService
+namespace SalePurchasesys.Services
 {
-    private readonly ApplicationDbContext _context;
-    public UserService(ApplicationDbContext context) { _context = context; }
-
-    public async Task<IEnumerable<User>> GetAllUsersAsync() =>
-        await _context.Users.ToListAsync();
-
-    public async Task<User> GetUserByIdAsync(int id) =>
-        await _context.Users.FindAsync(id);
-
-    public async Task<User> CreateUserAsync(User user)
+    public class UserService : IUserService
     {
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-        return user;
-    }
+        private readonly ApplicationDbContext _context;
+        private readonly IMapper _mapper;
 
-    public async Task<User> UpdateUserAsync(int id, User user)
-    {
-        var existing = await _context.Users.FindAsync(id);
-        if (existing == null) return null;
-        existing.Name = user.Name;
-        existing.Email = user.Email;
-        existing.Address = user.Address;
-        existing.Role = user.Role;
-        await _context.SaveChangesAsync();
-        return existing;
-    }
+        public UserService(ApplicationDbContext context, IMapper mapper)
+        {
+            _context = context;
+            _mapper = mapper;
+        }
 
-    public async Task<bool> DeleteUserAsync(int id)
-    {
-        var u = await _context.Users.FindAsync(id);
-        if (u == null) return false;
-        _context.Users.Remove(u);
-        await _context.SaveChangesAsync();
-        return true;
-    }
+        public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
+        {
+            var users = await _context.Users.ToListAsync();
+            return _mapper.Map<IEnumerable<UserDto>>(users);
+        }
 
-    // ← NEW
-    public async Task<User> GetUserByEmailAsync(string email) =>
-        await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        public async Task<UserDto> GetUserByIdAsync(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            return user == null ? null : _mapper.Map<UserDto>(user);
+        }
+
+        public async Task<UserDto> CreateUserAsync(User user)
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return _mapper.Map<UserDto>(user);
+        }
+
+        public async Task<UserDto> UpdateUserAsync(int id, User user)
+        {
+            var existing = await _context.Users.FindAsync(id);
+            if (existing == null) return null;
+
+            _mapper.Map(user, existing);
+            await _context.SaveChangesAsync();
+            return _mapper.Map<UserDto>(existing);
+        }
+
+        public async Task<bool> DeleteUserAsync(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return false;
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<UserDto> GetUserByEmailAsync(string email)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            return user == null ? null : _mapper.Map<UserDto>(user);
+        }
+    }
 }

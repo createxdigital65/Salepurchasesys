@@ -1,13 +1,17 @@
-﻿using SalePurchasesys.Models;
+﻿using SalePurchasesys.DTOs;
+using SalePurchasesys.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-public interface IUserService
+namespace SalePurchasesys.Services
 {
-    Task<IEnumerable<User>> GetAllUsersAsync();
-    Task<User> GetUserByIdAsync(int id);
-    Task<User> CreateUserAsync(User user);
-    Task<User> UpdateUserAsync(int id, User user);
-    Task<bool> DeleteUserAsync(int id);
-
-    // ← NEW
-    Task<User> GetUserByEmailAsync(string email);
+    public interface IUserService
+    {
+        Task<IEnumerable<UserDto>> GetAllUsersAsync();
+        Task<UserDto> GetUserByIdAsync(int id);
+        Task<UserDto> CreateUserAsync(User user);
+        Task<UserDto> UpdateUserAsync(int id, User user);
+        Task<bool> DeleteUserAsync(int id);
+        Task<UserDto> GetUserByEmailAsync(string email);
+    }
 }

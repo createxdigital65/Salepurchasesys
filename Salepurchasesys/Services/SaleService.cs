@@ -1,30 +1,43 @@
-﻿using SalePurchasesys.Models;
+﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using SalePurchasesys.Data;
+using SalePurchasesys.DTOs;
+using SalePurchasesys.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using SalePurchasesys.Data;
 
 namespace SalePurchasesys.Services
 {
     public class SaleService : ISaleService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMapper _mapper;
 
-        public SaleService(ApplicationDbContext context)
+        public SaleService(ApplicationDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        public async Task<IEnumerable<Sale>> GetAllSalesAsync()
+        public async Task<IEnumerable<SaleDto>> GetAllSalesAsync()
         {
-            return await _context.Sales.ToListAsync();
+            var sales = await _context.Sales
+                .Include(s => s.SaleDetails)
+                .ToListAsync();
+
+            return _mapper.Map<IEnumerable<SaleDto>>(sales);
         }
 
-        public async Task<Sale> GetSaleByIdAsync(int id)
+        public async Task<SaleDto> GetSaleByIdAsync(int id)
         {
-            return await _context.Sales.FindAsync(id);
+            var sale = await _context.Sales
+                .Include(s => s.SaleDetails)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            return sale == null ? null : _mapper.Map<SaleDto>(sale);
         }
 
+        // ✅ Accepts Sale (not DTO)
         public async Task<Sale> CreateSaleAsync(Sale sale)
         {
             _context.Sales.Add(sale);
@@ -32,16 +45,20 @@ namespace SalePurchasesys.Services
             return sale;
         }
 
-        public async Task<Sale> UpdateSaleAsync(int id, Sale sale)
+        // ✅ Accepts Sale (not DTO)
+        public async Task<Sale> UpdateSaleAsync(int id, Sale updatedSale)
         {
-            var existingSale = await _context.Sales.FindAsync(id);
-            if (existingSale == null)
-                return null;
+            var existingSale = await _context.Sales
+                .Include(s => s.SaleDetails)
+                .FirstOrDefaultAsync(s => s.Id == id);
 
-            existingSale.UserId = sale.UserId;
-            existingSale.OrderDate = sale.OrderDate;
-            existingSale.TotalAmount = sale.TotalAmount;
-            existingSale.Status = sale.Status;
+            if (existingSale == null) return null;
+
+            // Update top-level sale properties
+            _context.Entry(existingSale).CurrentValues.SetValues(updatedSale);
+
+            // Optionally update SaleDetails logic can go here if needed
+            // e.g., delete old, add new, or update existing ones
 
             await _context.SaveChangesAsync();
             return existingSale;
@@ -50,13 +67,13 @@ namespace SalePurchasesys.Services
         public async Task<bool> DeleteSaleAsync(int id)
         {
             var sale = await _context.Sales.FindAsync(id);
-            if (sale == null)
-                return false;
+            if (sale == null) return false;
 
             _context.Sales.Remove(sale);
             await _context.SaveChangesAsync();
             return true;
         }
+
         public async Task<Product> GetProductByIdAsync(int productId)
         {
             return await _context.Products.FindAsync(productId);

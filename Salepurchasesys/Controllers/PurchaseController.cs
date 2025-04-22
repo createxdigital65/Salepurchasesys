@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using SalePurchasesys.Models;
+using SalePurchasesys.DTOs;
 using SalePurchasesys.Services;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -18,36 +18,34 @@ namespace SalePurchasesys.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Purchase>>> GetPurchases()
+        public async Task<ActionResult<IEnumerable<PurchaseDto>>> GetPurchases()
         {
-            return Ok(await _purchaseService.GetAllPurchasesAsync());
+            var purchases = await _purchaseService.GetAllPurchasesAsync();
+            return Ok(purchases);
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Purchase>> GetPurchase(int id)
+        public async Task<ActionResult<PurchaseDto>> GetPurchase(int id)
         {
             var purchase = await _purchaseService.GetPurchaseByIdAsync(id);
-            if (purchase == null)
-                return NotFound();
+            if (purchase == null) return NotFound();
             return Ok(purchase);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Purchase>> CreatePurchase(Purchase purchase)
+        public async Task<ActionResult<PurchaseDto>> CreatePurchase(CreatePurchaseDto dto)
         {
-            var createdPurchase = await _purchaseService.CreatePurchaseAsync(purchase);
-            return CreatedAtAction(nameof(GetPurchase), new { id = createdPurchase.Id }, createdPurchase);
+            var created = await _purchaseService.CreatePurchaseAsync(dto);
+            return CreatedAtAction(nameof(GetPurchase), new { id = created.Id }, created);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdatePurchase(int id, Purchase purchase)
+        public async Task<IActionResult> UpdatePurchase(int id, UpdatePurchaseDto dto)
         {
-            if (id != purchase.Id)
-                return BadRequest();
+            if (id != dto.Id) return BadRequest();
 
-            var updatedPurchase = await _purchaseService.UpdatePurchaseAsync(id, purchase);
-            if (updatedPurchase == null)
-                return NotFound();
+            var updated = await _purchaseService.UpdatePurchaseAsync(id, dto);
+            if (updated == null) return NotFound();
 
             return NoContent();
         }
@@ -56,8 +54,7 @@ namespace SalePurchasesys.Controllers
         public async Task<IActionResult> DeletePurchase(int id)
         {
             var success = await _purchaseService.DeletePurchaseAsync(id);
-            if (!success)
-                return NotFound();
+            if (!success) return NotFound();
 
             return NoContent();
         }

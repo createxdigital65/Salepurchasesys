@@ -1,9 +1,11 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using SalePurchasesys.Models;
+using Microsoft.EntityFrameworkCore;
 using SalePurchasesys.Data;
+using SalePurchasesys.DTOs;
+using SalePurchasesys.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 
 namespace SalePurchasesys.Controllers
 {
@@ -12,107 +14,77 @@ namespace SalePurchasesys.Controllers
     public class PurchaseDetailController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        public PurchaseDetailController(ApplicationDbContext context)
+        private readonly IMapper _mapper;
+
+        public PurchaseDetailController(ApplicationDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        // GET: api/PurchaseDetail
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PurchaseDetail>>> GetPurchaseDetails()
+        public async Task<ActionResult<IEnumerable<PurchaseDetailDto>>> GetPurchaseDetails()
         {
-            return await _context.Set<PurchaseDetail>()
+            var details = await _context.PurchaseDetails
                 .Include(pd => pd.Purchase)
                 .Include(pd => pd.Product)
                 .ToListAsync();
+
+            return Ok(_mapper.Map<List<PurchaseDetailDto>>(details));
         }
 
-        // GET: api/PurchaseDetail/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<PurchaseDetail>> GetPurchaseDetail(int id)
+        public async Task<ActionResult<PurchaseDetailDto>> GetPurchaseDetail(int id)
         {
-            var purchaseDetail = await _context.Set<PurchaseDetail>()
+            var detail = await _context.PurchaseDetails
                 .Include(pd => pd.Purchase)
                 .Include(pd => pd.Product)
                 .FirstOrDefaultAsync(pd => pd.Id == id);
-            if (purchaseDetail == null)
-                return NotFound();
-            return purchaseDetail;
+
+            if (detail == null) return NotFound();
+
+            return Ok(_mapper.Map<PurchaseDetailDto>(detail));
         }
 
-        // POST: api/PurchaseDetail
         [HttpPost]
-        public async Task<ActionResult<PurchaseDetail>> CreatePurchaseDetail([FromBody] PurchaseDetail purchaseDetail)
+        public async Task<ActionResult<PurchaseDetailDto>> CreatePurchaseDetail(CreatePurchaseDetailDto dto)
         {
-            if (purchaseDetail == null)
-            {
-                return BadRequest("PurchaseDetail data is null.");
-            }
-
-            // Ensure the PurchaseId and ProductId are valid
-            var purchase = await _context.Purchases.FindAsync(purchaseDetail.PurchaseId);
-            var product = await _context.Products.FindAsync(purchaseDetail.ProductId);
+            var purchase = await _context.Purchases.FindAsync(dto.PurchaseId);
+            var product = await _context.Products.FindAsync(dto.ProductId);
 
             if (purchase == null)
-            {
-                return NotFound($"Purchase with ID {purchaseDetail.PurchaseId} not found.");
-            }
-
+                return NotFound($"Purchase with ID {dto.PurchaseId} not found.");
             if (product == null)
-            {
-                return NotFound($"Product with ID {purchaseDetail.ProductId} not found.");
-            }
+                return NotFound($"Product with ID {dto.ProductId} not found.");
 
-            // Set the navigation properties
-            purchaseDetail.Purchase = purchase;
-            purchaseDetail.Product = product;
-
-            // Add the PurchaseDetail
-            _context.PurchaseDetails.Add(purchaseDetail);
+            var detail = _mapper.Map<PurchaseDetail>(dto);
+            _context.PurchaseDetails.Add(detail);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetPurchaseDetail), new { id = purchaseDetail.Id }, purchaseDetail);
+            var resultDto = _mapper.Map<PurchaseDetailDto>(detail);
+            return CreatedAtAction(nameof(GetPurchaseDetail), new { id = resultDto.Id }, resultDto);
         }
 
-
-        // PUT: api/PurchaseDetail/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdatePurchaseDetail(int id, PurchaseDetail purchaseDetail)
+        public async Task<IActionResult> UpdatePurchaseDetail(int id, UpdatePurchaseDetailDto dto)
         {
-            if (id != purchaseDetail.Id)
-                return BadRequest("PurchaseDetail ID mismatch.");
+            if (id != dto.Id) return BadRequest();
 
-            try
-            {
-                _context.Entry(purchaseDetail).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-                return NoContent();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!PurchaseDetailExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-        }
-        private bool PurchaseDetailExists(int id)
-        {
-            return _context.PurchaseDetails.Any(pd => pd.Id == id);
+            var detail = await _context.PurchaseDetails.FindAsync(id);
+            if (detail == null) return NotFound();
+
+            _mapper.Map(dto, detail);
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
 
-        // DELETE: api/PurchaseDetail/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePurchaseDetail(int id)
         {
-            var purchaseDetail = await _context.Set<PurchaseDetail>().FindAsync(id);
-            if (purchaseDetail == null)
-                return NotFound();
-            _context.Remove(purchaseDetail);
+            var detail = await _context.PurchaseDetails.FindAsync(id);
+            if (detail == null) return NotFound();
+
+            _context.PurchaseDetails.Remove(detail);
             await _context.SaveChangesAsync();
             return NoContent();
         }
